@@ -195,7 +195,11 @@ jobs:
         run: |
           set -uo pipefail
           echo "Scanning '$SCAN_PATH' — files: $SCAN_FILES (in-scope source is uploaded to Google's CodeMender service)..."
-          cm find "$SCAN_PATH" -y 2>&1 | tee "$RUNNER_TEMP/cm-find.cm.log"
+          if ! cm find "$SCAN_PATH" -y --bypass-warning 2>&1 | tee "$RUNNER_TEMP/cm-find.cm.log"; then
+            LOG_TAIL=$(tail -n 30 "$RUNNER_TEMP/cm-find.cm.log" | tr "\n\r" "  " | cut -c 1-800)
+            echo "::warning title=cm-find-log::$LOG_TAIL"
+            exit 1
+          fi
 
       - name: Export Security Report (cm report -f json)
         if: ${{ always() && steps.scan.conclusion != 'skipped' }}
